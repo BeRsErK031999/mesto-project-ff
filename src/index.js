@@ -47,6 +47,10 @@ const profileJob = document.querySelector(".profile__description");
 const addCardForm = document.querySelector('.popup__form[name="new-place"]');
 const placeNameInput = document.querySelector(".popup__input_type_card-name");
 const placeLinkInput = document.querySelector(".popup__input_type_url");
+const placesList = document.querySelector(".places__list");
+const popupImage = imagePopup.querySelector(".popup__image");
+const popupCaption = imagePopup.querySelector(".popup__caption");
+
 
 document.addEventListener("DOMContentLoaded", () => {
   headerLogo.src = logoSrc;
@@ -57,7 +61,6 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function renderInitialCards(cards) {
-  const placesList = document.querySelector(".places__list");
   cards.forEach((card) => {
     const cardElement = createCard(card, deleteCard, likeCard);
     placesList.appendChild(cardElement);
@@ -95,18 +98,21 @@ function handleAddCardFormSubmit(evt) {
     deleteCard,
     likeCard
   );
-  document.querySelector(".places__list").prepend(newCard);
+  placesList.prepend(newCard);
   closePopup(addCardPopup);
   addCardForm.reset();
 }
 
-document.querySelector(".places__list").addEventListener("click", (event) => {
-  if (event.target.classList.contains("card__image")) {
-    openPopup(imagePopup);
-    imagePopup.querySelector(".popup__image").src = event.target.src;
-    imagePopup.querySelector(".popup__image").alt = event.target.alt;
-    imagePopup.querySelector(".popup__caption").textContent = event.target.alt;
-  }
+function handleCardClick(imageElement) {
+  openPopup(imagePopup);
+  popupImage.src = imageElement.src;
+  popupImage.alt = imageElement.alt;
+  popupCaption.textContent = imageElement.alt;
+}
+
+initialCards.forEach((card) => {
+  const cardElement = createCard(card, deleteCard, likeCard, handleCardClick); 
+  placesList.appendChild(cardElement);
 });
 
 document.querySelectorAll(".popup").forEach((popup) => {
