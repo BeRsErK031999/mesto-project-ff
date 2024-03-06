@@ -96,7 +96,8 @@ function handleAddCardFormSubmit(evt) {
   const newCard = createCard(
     { name: placeNameInput.value, link: placeLinkInput.value },
     deleteCard,
-    likeCard
+    likeCard,
+    handleCardClick
   );
   placesList.prepend(newCard);
   closePopup(addCardPopup);
