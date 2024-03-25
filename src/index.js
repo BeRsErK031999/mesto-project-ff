@@ -2,35 +2,10 @@ import "./styles/index.css";
 import { createCard, deleteCard, likeCard } from "./components/card";
 import { openPopup, closePopup } from "./components/modal";
 import logoSrc from "./images/logo.svg";
-import avatarSrc from "./images/avatar.jpg";
 import { enableValidation, clearValidation } from "./components/validation";
-
-const initialCards = [
-  {
-    name: "Архыз",
-    link: "https://pictures.s3.yandex.net/frontend-developer/cards-compressed/arkhyz.jpg",
-  },
-  {
-    name: "Челябинская область",
-    link: "https://pictures.s3.yandex.net/frontend-developer/cards-compressed/chelyabinsk-oblast.jpg",
-  },
-  {
-    name: "Иваново",
-    link: "https://pictures.s3.yandex.net/frontend-developer/cards-compressed/ivanovo.jpg",
-  },
-  {
-    name: "Камчатка",
-    link: "https://pictures.s3.yandex.net/frontend-developer/cards-compressed/kamchatka.jpg",
-  },
-  {
-    name: "Холмогорский район",
-    link: "https://pictures.s3.yandex.net/frontend-developer/cards-compressed/kholmogorsky-rayon.jpg",
-  },
-  {
-    name: "Байкал",
-    link: "https://pictures.s3.yandex.net/frontend-developer/cards-compressed/baikal.jpg",
-  },
-];
+import { getUserInfo, getInitialCards } from './api.js';
+import { updateUserInfo } from './api.js';
+import { addCardToServer } from './api.js';
 
 const profileImageDiv = document.querySelector(".profile__image");
 const headerLogo = document.querySelector(".header__logo");
@@ -65,10 +40,7 @@ enableValidation(validationConfig);
 
 document.addEventListener("DOMContentLoaded", () => {
   headerLogo.src = logoSrc;
-  if (profileImageDiv) {
-    profileImageDiv.style.backgroundImage = `url('${avatarSrc}')`;
-  }
-  renderInitialCards(initialCards);
+  
   enableValidation({
     formSelector: ".popup__form",
     inputSelector: ".popup__input",
@@ -77,9 +49,18 @@ document.addEventListener("DOMContentLoaded", () => {
     inputErrorClass: "popup__input_type_error",
     errorClass: "popup__error_visible",
   });
+  // Получить данные с сервера и отобразить их
+  Promise.all([getUserInfo(), getInitialCards()])
+    .then(([userInfo, cards]) => {
+      updateProfile(userInfo);
+      renderInitialCards(cards);
+    })
+    .catch(error => {
+      console.error("Ошибка при получении данных:", error);
+    });
 });
 
-function renderInitialCards(cards) {
+export function renderInitialCards(cards) {
   cards.forEach((card) => {
     const cardElement = createCard(card, deleteCard, likeCard, handleCardClick);
     placesList.appendChild(cardElement);
@@ -105,25 +86,32 @@ closeButtons.forEach((button) => {
 
 formElement.addEventListener("submit", handleFormSubmit);
 addCardForm.addEventListener("submit", handleAddCardFormSubmit);
-
 function handleFormSubmit(evt) {
   evt.preventDefault();
   profileName.textContent = nameInput.value;
   profileJob.textContent = jobInput.value;
   closePopup(editProfilePopup);
+  updateUserInfo(nameInput.value, jobInput.value);
 }
 
 function handleAddCardFormSubmit(evt) {
   evt.preventDefault();
-  const newCard = createCard(
-    { name: placeNameInput.value, link: placeLinkInput.value },
-    deleteCard,
-    likeCard,
-    handleCardClick
-  );
-  placesList.prepend(newCard);
-  closePopup(addCardPopup);
-  addCardForm.reset();
+  
+  addCardToServer(placeNameInput.value, placeLinkInput.value)
+    .then(newCardData => {
+      const newCard = createCard(
+        newCardData, // Используйте данные, возвращенные сервером
+        deleteCard,
+        likeCard,
+        handleCardClick
+      );
+      placesList.prepend(newCard);
+      closePopup(addCardPopup);
+      addCardForm.reset();
+    })
+    .catch(error => {
+      console.error("Ошибка при добавлении карточки на сервер:", error);
+    });
 }
 
 function handleCardClick(imageElement) {
@@ -140,3 +128,10 @@ document.querySelectorAll(".popup").forEach((popup) => {
     }
   });
 });
+
+function updateProfile(userInfo) {
+  // Обновляем имя пользователя, описание и изображение аватара
+  profileName.textContent = userInfo.name;
+  profileJob.textContent = userInfo.about;
+  profileImageDiv.style.backgroundImage = `url('${userInfo.avatar}')`;
+}
