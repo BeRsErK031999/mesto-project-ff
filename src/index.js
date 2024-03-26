@@ -3,9 +3,10 @@ import { createCard, deleteCard, likeCard } from "./components/card";
 import { openPopup, closePopup } from "./components/modal";
 import logoSrc from "./images/logo.svg";
 import { enableValidation, clearValidation } from "./components/validation";
-import { getUserInfo, getInitialCards } from './api.js';
-import { updateUserInfo } from './api.js';
-import { addCardToServer } from './api.js';
+import { getUserInfo, getInitialCards } from "./api.js";
+import { updateUserInfo } from "./api.js";
+import { addCardToServer } from "./api.js";
+import { deleteCardFromServer } from "./api.js";
 
 const profileImageDiv = document.querySelector(".profile__image");
 const headerLogo = document.querySelector(".header__logo");
@@ -26,7 +27,7 @@ const placeLinkInput = document.querySelector(".popup__input_type_url");
 const placesList = document.querySelector(".places__list");
 const popupImage = imagePopup.querySelector(".popup__image");
 const popupCaption = imagePopup.querySelector(".popup__caption");
-
+let currentUserId = null;
 const validationConfig = {
   formSelector: ".popup__form",
   inputSelector: ".popup__input",
@@ -38,9 +39,9 @@ const validationConfig = {
 
 enableValidation(validationConfig);
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   headerLogo.src = logoSrc;
-  
+
   enableValidation({
     formSelector: ".popup__form",
     inputSelector: ".popup__input",
@@ -50,19 +51,28 @@ document.addEventListener("DOMContentLoaded", () => {
     errorClass: "popup__error_visible",
   });
   // Получить данные с сервера и отобразить их
-  Promise.all([getUserInfo(), getInitialCards()])
-    .then(([userInfo, cards]) => {
-      updateProfile(userInfo);
-      renderInitialCards(cards);
-    })
-    .catch(error => {
-      console.error("Ошибка при получении данных:", error);
-    });
+  try {
+    const userInfo = await getUserInfo();
+    const cards = await getInitialCards();
+    updateProfile(userInfo);
+    // Поскольку currentUserId теперь установлен, мы можем безопасно его использовать
+    renderInitialCards(cards, userInfo._id); // Модифицируйте renderInitialCards, чтобы он принимал userId
+    currentUserId = userInfo._id; // Сохраняем ID текущего пользователя
+    console.log("ID текущего пользователя:", currentUserId); // Выводим в консоль для проверки
+  } catch (error) {
+    console.error("Ошибка при получении данных:", error);
+  }
 });
 
-export function renderInitialCards(cards) {
+export function renderInitialCards(cards, userId) {
   cards.forEach((card) => {
-    const cardElement = createCard(card, deleteCard, likeCard, handleCardClick);
+    const cardElement = createCard(
+      card,
+      deleteCardCallback,
+      likeCard,
+      handleCardClick,
+      userId
+    );
     placesList.appendChild(cardElement);
   });
 }
@@ -96,9 +106,9 @@ function handleFormSubmit(evt) {
 
 function handleAddCardFormSubmit(evt) {
   evt.preventDefault();
-  
+
   addCardToServer(placeNameInput.value, placeLinkInput.value)
-    .then(newCardData => {
+    .then((newCardData) => {
       const newCard = createCard(
         newCardData, // Используйте данные, возвращенные сервером
         deleteCard,
@@ -109,7 +119,7 @@ function handleAddCardFormSubmit(evt) {
       closePopup(addCardPopup);
       addCardForm.reset();
     })
-    .catch(error => {
+    .catch((error) => {
       console.error("Ошибка при добавлении карточки на сервер:", error);
     });
 }
@@ -135,3 +145,25 @@ function updateProfile(userInfo) {
   profileJob.textContent = userInfo.about;
   profileImageDiv.style.backgroundImage = `url('${userInfo.avatar}')`;
 }
+
+async function handleDeleteCard(cardElement, cardId) {
+  try {
+    await deleteCardFromServer(cardId);
+    deleteCard(cardElement); // Удаляем карточку из DOM после успешного запроса
+  } catch (error) {
+    console.error("Ошибка при удалении карточки:", error);
+    alert("Не удалось удалить карточку. Пожалуйста, попробуйте ещё раз."); // Обратная связь пользователю
+  }
+}
+
+const deleteCardCallback = (cardElement, cardId) => {
+  deleteCardFromServer(cardId)
+    .then(() => {
+      deleteCard(cardElement); // Удаляем карточку из DOM
+      console.log("Карточка удалена: ", cardId);
+    })
+    .catch((error) => {
+      console.error("Ошибка при удалении карточки: ", error);
+      alert("Не удалось удалить карточку. Пожалуйста, попробуйте ещё раз.");
+    });
+};
