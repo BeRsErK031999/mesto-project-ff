@@ -1,5 +1,4 @@
 import { likeCardOnServer, unlikeCardOnServer } from '../api.js';
-
 export function createCard(
   cardData,
   deleteCardCallback,
@@ -24,19 +23,7 @@ export function createCard(
 
   // Навешивание обработчиков событий
   cardImage.addEventListener("click", () => handleCardClickCallback(cardImage));
-  likeButton.addEventListener("click", () => {
-    const isLiked = likeButton.classList.contains("card__like-button_is-active");
-    const action = isLiked ? unlikeCardOnServer : likeCardOnServer;
-  
-    action(cardData._id)
-      .then((updatedCardData) => {
-        likeCount.textContent = updatedCardData.likes.length; // Обновляем количество лайков
-        likeButton.classList.toggle("card__like-button_is-active"); // Обновляем состояние кнопки лайка
-      })
-      .catch((error) => {
-        console.error("Ошибка при обработке лайка:", error);
-      });
-  });
+  likeButton.addEventListener("click", () => likeCardCallback(cardData, likeButton, likeCount));
 
   // Проверка владельца карточки и настройка кнопки удаления
   if (cardData.owner._id === currentUserId) {

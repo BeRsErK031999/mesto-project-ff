@@ -8,6 +8,7 @@ import { updateUserInfo } from "./api.js";
 import { addCardToServer } from "./api.js";
 import { deleteCardFromServer } from "./api.js";
 import { updateAvatar } from './api.js';
+import { likeCardOnServer, unlikeCardOnServer } from './api.js';
 
 const profileImageDiv = document.querySelector(".profile__image");
 const headerLogo = document.querySelector(".header__logo");
@@ -45,27 +46,19 @@ const validationConfig = {
 
 enableValidation(validationConfig);
 
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
   headerLogo.src = logoSrc;
 
-  enableValidation({
-    formSelector: ".popup__form",
-    inputSelector: ".popup__input",
-    submitButtonSelector: ".popup__button",
-    inactiveButtonClass: "popup__button_disabled",
-    inputErrorClass: "popup__input_type_error",
-    errorClass: "popup__error_visible",
-  });
-  try {
-    const userInfo = await getUserInfo();
-    const cards = await getInitialCards();
-    updateProfile(userInfo);
-    renderInitialCards(cards, userInfo._id); 
-    currentUserId = userInfo._id; 
-    console.log("ID текущего пользователя:", currentUserId); 
-  } catch (error) {
-    console.error("Ошибка при получении данных:", error);
-  }
+  Promise.all([getUserInfo(), getInitialCards()])
+    .then(([userInfo, cards]) => {
+      updateProfile(userInfo); 
+      renderInitialCards(cards, userInfo._id); 
+      currentUserId = userInfo._id; 
+      console.log("ID текущего пользователя:", currentUserId);
+    })
+    .catch((error) => {
+      console.error("Ошибка при получении данных:", error);
+    });
 });
 
 export function renderInitialCards(cards, userId) {
@@ -73,7 +66,7 @@ export function renderInitialCards(cards, userId) {
     const cardElement = createCard(
       card,
       deleteCardCallback,
-      likeCard,
+      likeCardCallback,
       handleCardClick,
       userId
     );
@@ -130,7 +123,7 @@ function handleAddCardFormSubmit(evt) {
     .then((newCardData) => {
       const newCard = createCard(
         newCardData,
-        deleteCard,
+        deleteCardCallback,
         likeCard,
         handleCardClick
       );
@@ -168,15 +161,6 @@ function updateProfile(userInfo) {
   profileImageDiv.style.backgroundImage = `url('${userInfo.avatar}')`;
 }
 
-async function handleDeleteCard(cardElement, cardId) {
-  try {
-    await deleteCardFromServer(cardId);
-    deleteCard(cardElement); 
-  } catch (error) {
-    console.error("Ошибка при удалении карточки:", error);
-    alert("Не удалось удалить карточку. Пожалуйста, попробуйте ещё раз."); 
-  }
-}
 
 const deleteCardCallback = (cardElement, cardId) => {
   deleteCardFromServer(cardId)
@@ -211,4 +195,16 @@ avatarForm.addEventListener('submit', function(evt) {
       saveButton.textContent = 'Сохранить';
     });
 });
-enableValidation(validationConfig);
+export function likeCardCallback(cardData, likeButton, likeCount) {
+  const isLiked = likeButton.classList.contains("card__like-button_is-active");
+  const action = isLiked ? unlikeCardOnServer : likeCardOnServer;
+
+  action(cardData._id)
+    .then(updatedCardData => {
+      likeCount.textContent = updatedCardData.likes.length; 
+      likeButton.classList.toggle("card__like-button_is-active"); 
+    })
+    .catch(error => {
+      console.error("Ошибка при обработке лайка:", error);
+    });
+}
