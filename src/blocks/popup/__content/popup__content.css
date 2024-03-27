@@ -7,7 +7,6 @@
   position: relative;
   box-sizing: border-box;
   padding: 34px 36px;
-  
 }
 
 @media screen and (max-width: 568px) {
@@ -16,5 +15,24 @@
     max-width: calc(100% - 80px);
     margin-top: 40px;
     padding: 30px 20px;
+  }
+}
+
+.popup__content__avatar {
+  width: 430px;
+  height: 272px;
+  background-color: #fff;
+  border-radius: 10px;
+  position: relative;
+  box-sizing: border-box;
+  padding: 34px 36px;
+}
+
+@media screen and (max-width: 568px) {
+  .popup__content__avatar {
+    width: calc(100% - 80px);
+    margin-top: 40px;
+    padding: 30px 20px;
+    height: auto;
   }
 }

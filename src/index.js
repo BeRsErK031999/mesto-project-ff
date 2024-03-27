@@ -7,6 +7,7 @@ import { getUserInfo, getInitialCards } from "./api.js";
 import { updateUserInfo } from "./api.js";
 import { addCardToServer } from "./api.js";
 import { deleteCardFromServer } from "./api.js";
+import { updateAvatar } from './api.js';
 
 const profileImageDiv = document.querySelector(".profile__image");
 const headerLogo = document.querySelector(".header__logo");
@@ -27,6 +28,11 @@ const placeLinkInput = document.querySelector(".popup__input_type_url");
 const placesList = document.querySelector(".places__list");
 const popupImage = imagePopup.querySelector(".popup__image");
 const popupCaption = imagePopup.querySelector(".popup__caption");
+const profileImageEditButton = document.querySelector('.profile__image-edit-button');
+const updateAvatarPopup = document.querySelector('.popup_type_update-avatar');
+const avatarForm = document.querySelector('.popup__form[name="update-avatar"]');
+const avatarLinkInput = document.querySelector('.popup__input[name="avatar-link"]');
+
 let currentUserId = null;
 const validationConfig = {
   formSelector: ".popup__form",
@@ -50,15 +56,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     inputErrorClass: "popup__input_type_error",
     errorClass: "popup__error_visible",
   });
-  // Получить данные с сервера и отобразить их
   try {
     const userInfo = await getUserInfo();
     const cards = await getInitialCards();
     updateProfile(userInfo);
-    // Поскольку currentUserId теперь установлен, мы можем безопасно его использовать
-    renderInitialCards(cards, userInfo._id); // Модифицируйте renderInitialCards, чтобы он принимал userId
-    currentUserId = userInfo._id; // Сохраняем ID текущего пользователя
-    console.log("ID текущего пользователя:", currentUserId); // Выводим в консоль для проверки
+    renderInitialCards(cards, userInfo._id); 
+    currentUserId = userInfo._id; 
+    console.log("ID текущего пользователя:", currentUserId); 
   } catch (error) {
     console.error("Ошибка при получении данных:", error);
   }
@@ -98,19 +102,34 @@ formElement.addEventListener("submit", handleFormSubmit);
 addCardForm.addEventListener("submit", handleAddCardFormSubmit);
 function handleFormSubmit(evt) {
   evt.preventDefault();
-  profileName.textContent = nameInput.value;
-  profileJob.textContent = jobInput.value;
-  closePopup(editProfilePopup);
-  updateUserInfo(nameInput.value, jobInput.value);
+  const saveButton = evt.target.querySelector('.popup__button');
+  saveButton.textContent = 'Сохранение...';
+
+  updateUserInfo(nameInput.value, jobInput.value)
+    .then(() => {
+      profileName.textContent = nameInput.value;
+      profileJob.textContent = jobInput.value;
+      closePopup(editProfilePopup);
+    })
+    .catch((error) => {
+      console.error("Ошибка при обновлении профиля:", error);
+    })
+    .finally(() => {
+      saveButton.textContent = 'Сохранить';
+    });
 }
 
 function handleAddCardFormSubmit(evt) {
   evt.preventDefault();
-
+  
+  const submitButton = evt.target.querySelector('.popup__button');
+  const initialButtonText = submitButton.textContent; 
+  submitButton.textContent = 'Сохранение...'; 
+  
   addCardToServer(placeNameInput.value, placeLinkInput.value)
     .then((newCardData) => {
       const newCard = createCard(
-        newCardData, // Используйте данные, возвращенные сервером
+        newCardData,
         deleteCard,
         likeCard,
         handleCardClick
@@ -121,8 +140,12 @@ function handleAddCardFormSubmit(evt) {
     })
     .catch((error) => {
       console.error("Ошибка при добавлении карточки на сервер:", error);
+    })
+    .finally(() => {
+      submitButton.textContent = initialButtonText; 
     });
 }
+
 
 function handleCardClick(imageElement) {
   openPopup(imagePopup);
@@ -140,7 +163,6 @@ document.querySelectorAll(".popup").forEach((popup) => {
 });
 
 function updateProfile(userInfo) {
-  // Обновляем имя пользователя, описание и изображение аватара
   profileName.textContent = userInfo.name;
   profileJob.textContent = userInfo.about;
   profileImageDiv.style.backgroundImage = `url('${userInfo.avatar}')`;
@@ -149,17 +171,17 @@ function updateProfile(userInfo) {
 async function handleDeleteCard(cardElement, cardId) {
   try {
     await deleteCardFromServer(cardId);
-    deleteCard(cardElement); // Удаляем карточку из DOM после успешного запроса
+    deleteCard(cardElement); 
   } catch (error) {
     console.error("Ошибка при удалении карточки:", error);
-    alert("Не удалось удалить карточку. Пожалуйста, попробуйте ещё раз."); // Обратная связь пользователю
+    alert("Не удалось удалить карточку. Пожалуйста, попробуйте ещё раз."); 
   }
 }
 
 const deleteCardCallback = (cardElement, cardId) => {
   deleteCardFromServer(cardId)
     .then(() => {
-      deleteCard(cardElement); // Удаляем карточку из DOM
+      deleteCard(cardElement); 
       console.log("Карточка удалена: ", cardId);
     })
     .catch((error) => {
@@ -167,3 +189,26 @@ const deleteCardCallback = (cardElement, cardId) => {
       alert("Не удалось удалить карточку. Пожалуйста, попробуйте ещё раз.");
     });
 };
+
+profileImageDiv.addEventListener('click', () => {
+  openPopup(updateAvatarPopup);
+});
+
+avatarForm.addEventListener('submit', function(evt) {
+  evt.preventDefault();
+  const saveButton = avatarForm.querySelector('.popup__button');
+  saveButton.textContent = 'Сохранение...';
+
+  updateAvatar(avatarLinkInput.value)
+    .then((updatedUserInfo) => {
+      profileImageDiv.style.backgroundImage = `url('${avatarLinkInput.value}')`;
+      closePopup(updateAvatarPopup);
+    })
+    .catch((error) => {
+      console.error("Ошибка при обновлении аватара:", error);
+    })
+    .finally(() => {
+      saveButton.textContent = 'Сохранить';
+    });
+});
+enableValidation(validationConfig);

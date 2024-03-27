@@ -25,8 +25,6 @@ export function getUserInfo() {
     .then((userData) => {
       // Проверяем наличие ожидаемых данных
       if (userData && userData._id) {
-        console.log("Полученные данные пользователя:", userData);
-        console.log("ID пользователя:", userData._id); // Уточняем логирование
         return userData;
       } else {
         // Если структура данных не соответствует ожидаемой, выбрасываем ошибку
@@ -40,25 +38,18 @@ export function getUserInfo() {
 }
 // Функция для обновления профиля пользователя
 export function updateUserInfo(name, about) {
-  fetch(`${config.baseUrl}/users/me`, {
-    method: "PATCH",
+  return fetch(`${config.baseUrl}/users/me`, { // Важно: 'return' здесь
+    method: 'PATCH',
     headers: {
       authorization: config.headers.authorization,
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({
       name: name,
-      about: about,
-    }),
-  })
-    .then(handleResponse)
-    .then((updatedUserInfo) => {
-      updateProfile(updatedUserInfo);
-      closePopup(editProfilePopup);
+      about: about
     })
-    .catch((error) => {
-      console.error("Ошибка при обновлении информации пользователя:", error);
-    });
+  })
+  .then(handleResponse); // Функция 'handleResponse' должна возвращать результат обработки JSON.
 }
 
 export function addCardToServer(name, link) {
@@ -104,4 +95,17 @@ export function unlikeCardOnServer(cardId) {
     method: "DELETE",
     headers: config.headers,
   }).then(handleResponse);
+}
+
+//Аватар
+export function updateAvatar(avatarUrl) {
+  return fetch(`${config.baseUrl}/users/me/avatar`, {
+    method: 'PATCH',
+    headers: {
+      authorization: config.headers.authorization,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ avatar: avatarUrl })
+  })
+  .then(handleResponse);
 }
